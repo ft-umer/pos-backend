@@ -1,7 +1,7 @@
 {
   "type": "module",
   "scripts": {
-    "start": "node api/server.js"
+    "start": "node server.js"
   }
   ,
   "dependencies": {
