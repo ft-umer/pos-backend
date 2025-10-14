@@ -197,9 +197,11 @@ app.use("/products", productRoutes);
 
 app.use("/sales", salesRoutes);
 
-// =======================
-// Start server
-// =======================
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+// Local run only
+if (process.env.NODE_ENV !== "production") {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => console.log(`Server running locally on port ${PORT}`));
+}
+
+// 👉 Export default for Vercel
+export default app;
