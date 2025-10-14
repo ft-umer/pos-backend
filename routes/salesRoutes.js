@@ -48,16 +48,21 @@ router.post("/", async (req, res) => {
 });
 
 // ========================
-// GET /sales → Fetch all sales
+// GET /sales → Fetch all sales (with product details)
 // ========================
 router.get("/", async (req, res) => {
   try {
-    const sales = await Sale.find().sort({ createdAt: -1 });
+    const sales = await Sale.find()
+      .sort({ createdAt: -1 })
+      .populate("items.productId", "name price imageUrl plateType"); // Populate product fields
+
     res.status(200).json(sales);
   } catch (err) {
+    console.error("❌ Error fetching sales:", err);
     res.status(500).json({ message: err.message });
   }
 });
+
 
 // ========================
 // PUT /sales/:id → Edit Sale

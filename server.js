@@ -6,22 +6,19 @@ import mongoose from "mongoose";
 import cors from "cors";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-import { v2 as cloudinary } from "cloudinary";
 import productRoutes from "./routes/productRoutes.js";
 import salesRoutes from "./routes/salesRoutes.js";
+import { v2 as cloudinary } from "cloudinary";
+
 
 const app = express();
+const PORT = process.env.PORT || 5000;
 
-// =======================
 // Middleware
-// =======================
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// =======================
-// Cloudinary Config
-// =======================
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -29,22 +26,15 @@ cloudinary.config({
 });
 
 // =======================
-// MongoDB Connection (Stable for Serverless)
+// MongoDB Connection
 // =======================
-let isConnected = false;
-
-async function connectDB() {
-  if (isConnected) return;
-  try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI);
-    isConnected = conn.connections[0].readyState;
-    console.log("✅ MongoDB connected");
-  } catch (err) {
-    console.error("❌ MongoDB connection failed:", err.message);
-  }
-}
-
-connectDB();
+mongoose
+  .connect(process.env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => console.log("✅ Connected to MongoDB"))
+  .catch((err) => console.error("❌ MongoDB connection error:", err));
 
 // =======================
 // User Schema
@@ -62,7 +52,7 @@ const userSchema = new mongoose.Schema({
 const User = mongoose.model("User", userSchema);
 
 // =======================
-// Auth Middleware
+// Middleware
 // =======================
 const authenticateJWT = async (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
@@ -70,14 +60,16 @@ const authenticateJWT = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Get full Mongoose document, not plain object
     const user = await User.findById(decoded.id);
     if (!user) return res.status(401).json({ message: "User not found" });
 
-    req.user = user;
+    req.user = user; // ✅ this must be a full model instance
     next();
   } catch (err) {
     console.error("JWT auth error:", err);
-    res.status(401).json({ message: "Invalid token" });
+    return res.status(401).json({ message: "Invalid token" });
   }
 };
 
@@ -89,7 +81,7 @@ export const authorizeSuperadmin = (req, res, next) => {
 };
 
 // =======================
-// Default Superadmin
+// Create default superadmin
 // =======================
 const createDefaultSuperadmin = async () => {
   try {
@@ -114,17 +106,14 @@ createDefaultSuperadmin();
 // Routes
 // =======================
 
-// ✅ Health check (for Vercel test)
-app.get("/", (req, res) => {
-  res.send("✅ POS Backend API is running on Vercel!");
-});
-
-// ✅ Login
+// Login
 app.post("/login", async (req, res) => {
   try {
     const { username, password, pin } = req.body;
     if (!username || !password)
-      return res.status(400).json({ message: "Username and password required" });
+      return res
+        .status(400)
+        .json({ message: "Username and password required" });
 
     const user = await User.findOne({ username });
     if (!user) return res.status(401).json({ message: "Invalid credentials" });
@@ -142,7 +131,6 @@ app.post("/login", async (req, res) => {
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "8h",
     });
-
     res.json({ message: "Login successful", token, user });
   } catch (err) {
     console.error("Login error:", err);
@@ -152,10 +140,9 @@ app.post("/login", async (req, res) => {
   }
 });
 
-// ✅ Logout
 app.post("/logout", authenticateJWT, async (req, res) => {
   try {
-    const user = req.user;
+    const user = req.user; // ✅ Already a Mongoose document
     if (!user) return res.status(404).json({ message: "User not found" });
 
     user.lastLogout = new Date();
@@ -170,7 +157,7 @@ app.post("/logout", authenticateJWT, async (req, res) => {
   }
 });
 
-// ✅ Get all users (Superadmin only)
+// Get all users (superadmin only)
 app.get("/users", authenticateJWT, authorizeSuperadmin, async (req, res) => {
   try {
     const users = await User.find();
@@ -183,7 +170,6 @@ app.get("/users", authenticateJWT, authorizeSuperadmin, async (req, res) => {
   }
 });
 
-// ✅ Add new admin
 app.post("/users", authenticateJWT, authorizeSuperadmin, async (req, res) => {
   try {
     const { username, pin, site } = req.body;
@@ -206,19 +192,14 @@ app.post("/users", authenticateJWT, authorizeSuperadmin, async (req, res) => {
   }
 });
 
-// ✅ Product & Sales Routes
+
 app.use("/products", productRoutes);
+
 app.use("/sales", salesRoutes);
 
 // =======================
-// Local Run Only
+// Start server
 // =======================
-if (process.env.NODE_ENV !== "production") {
-  const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
-}
-
-// =======================
-// Export for Vercel
-// =======================
-export default app;
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
