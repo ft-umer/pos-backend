@@ -54,7 +54,7 @@ router.get("/", async (req, res) => {
   try {
     const sales = await Sale.find()
       .sort({ createdAt: -1 })
-      .populate("items.productId", "name price imageUrl plateType"); // Populate product fields
+      .populate("items.productId", "name fullPrice halfPrice imageUrl plateType"); // Populate product fields
 
     res.status(200).json(sales);
   } catch (err) {

@@ -8,6 +8,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import productRoutes from "./routes/productRoutes.js";
 import salesRoutes from "./routes/salesRoutes.js";
+import orderTakerRoutes from "./routes/orderTakerRoutes.js";
 import { v2 as cloudinary } from "cloudinary";
 
 
@@ -194,7 +195,7 @@ app.post("/users", authenticateJWT, authorizeSuperadmin, async (req, res) => {
 
 
 app.use("/products", productRoutes);
-
+app.use("/orderTakers", orderTakerRoutes);
 app.use("/sales", salesRoutes);
 
 // Local run only
