@@ -197,6 +197,34 @@ app.post("/users", authenticateJWT, authorizeSuperadmin, async (req, res) => {
 });
 
 
+app.delete("/users/:id", authenticateJWT, authorizeSuperadmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Check if user exists
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Prevent superadmin from deleting themselves
+    if (req.user.id === id) {
+      return res.status(400).json({ message: "You cannot delete your own account" });
+    }
+
+    await User.findByIdAndDelete(id);
+
+    res.json({ message: "Admin deleted successfully" });
+  } catch (err) {
+    console.error("Delete admin error:", err);
+    res.status(500).json({
+      message: "Server error while deleting admin",
+      error: err.message,
+    });
+  }
+});
+
+
 app.use("/products", productRoutes);
 app.use("/orderTakers", orderTakerRoutes);
 app.use("/sales", salesRoutes);
