@@ -1,5 +1,5 @@
 import express from "express";
-import Sale from "../models/Sales.js"
+import Sale from "../models/Sales.js";
 import Product from "../models/Product.js";
 
 const router = express.Router();
@@ -15,22 +15,30 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ message: "No items in sale." });
     }
 
-    // Validate and update stock
+    // ✅ Validate and update product stock
     for (const item of items) {
       const product = await Product.findById(item.productId);
       if (!product) {
         return res.status(404).json({ message: `Product not found: ${item.productId}` });
       }
 
-      if (product.stock < item.quantity) {
-        return res.status(400).json({ message: `Insufficient stock for ${product.name}` });
+      if (item.plateType === "Full Plate") {
+        if (product.fullStock < item.quantity) {
+          return res.status(400).json({ message: `Insufficient full stock for ${product.name}` });
+        }
+        product.fullStock -= item.quantity;
+      } else if (item.plateType === "Half Plate") {
+        if (product.halfStock < item.quantity) {
+          return res.status(400).json({ message: `Insufficient half stock for ${product.name}` });
+        }
+        product.halfStock -= item.quantity;
       }
 
-      product.stock -= item.quantity;
+      product.totalStock = (product.fullStock || 0) + (product.halfStock || 0);
       await product.save();
     }
 
-    // Create sale record
+    // ✅ Create new sale record
     const sale = new Sale({
       items,
       total,
@@ -54,7 +62,7 @@ router.get("/", async (req, res) => {
   try {
     const sales = await Sale.find()
       .sort({ createdAt: -1 })
-      .populate("items.productId", "name fullPrice halfPrice imageUrl plateType"); // Populate product fields
+      .populate("items.productId", "name fullPrice halfPrice imageUrl");
 
     res.status(200).json(sales);
   } catch (err) {
@@ -62,7 +70,6 @@ router.get("/", async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
-
 
 // ========================
 // PUT /sales/:id → Edit Sale
@@ -77,31 +84,44 @@ router.put("/:id", async (req, res) => {
       return res.status(404).json({ message: "Sale not found" });
     }
 
-    // Restore stock from previous sale
+    // ✅ Restore previous stock
     for (const item of existingSale.items) {
       const product = await Product.findById(item.productId);
       if (product) {
-        product.stock += item.quantity;
+        if (item.plateType === "Full Plate") {
+          product.fullStock += item.quantity;
+        } else if (item.plateType === "Half Plate") {
+          product.halfStock += item.quantity;
+        }
+        product.totalStock = (product.fullStock || 0) + (product.halfStock || 0);
         await product.save();
       }
     }
 
-    // Deduct stock for new items
+    // ✅ Deduct stock for new sale
     for (const item of items) {
       const product = await Product.findById(item.productId);
       if (!product) {
         return res.status(404).json({ message: `Product not found: ${item.productId}` });
       }
 
-      if (product.stock < item.quantity) {
-        return res.status(400).json({ message: `Insufficient stock for ${product.name}` });
+      if (item.plateType === "Full Plate") {
+        if (product.fullStock < item.quantity) {
+          return res.status(400).json({ message: `Insufficient full stock for ${product.name}` });
+        }
+        product.fullStock -= item.quantity;
+      } else if (item.plateType === "Half Plate") {
+        if (product.halfStock < item.quantity) {
+          return res.status(400).json({ message: `Insufficient half stock for ${product.name}` });
+        }
+        product.halfStock -= item.quantity;
       }
 
-      product.stock -= item.quantity;
+      product.totalStock = (product.fullStock || 0) + (product.halfStock || 0);
       await product.save();
     }
 
-    // Update sale
+    // ✅ Update sale record
     existingSale.items = items;
     existingSale.total = total;
     existingSale.paymentMethod = paymentMethod;
@@ -128,11 +148,16 @@ router.delete("/:id", async (req, res) => {
       return res.status(404).json({ message: "Sale not found" });
     }
 
-    // Restore stock from sale
+    // ✅ Restore stock for each sold item
     for (const item of sale.items) {
       const product = await Product.findById(item.productId);
       if (product) {
-        product.stock += item.quantity;
+        if (item.plateType === "Full Plate") {
+          product.fullStock += item.quantity;
+        } else if (item.plateType === "Half Plate") {
+          product.halfStock += item.quantity;
+        }
+        product.totalStock = (product.fullStock || 0) + (product.halfStock || 0);
         await product.save();
       }
     }

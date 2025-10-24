@@ -12,38 +12,51 @@ const upload = multer({ storage });
 // === Create Product ===
 router.post("/", upload.single("image"), async (req, res) => {
   try {
-    const { name, fullPrice, halfPrice, stock, category, barcode } = req.body;
+    const {
+      name,
+      fullPrice,
+      halfPrice,
+      fullStock,
+      halfStock,
+      category,
+      barcode,
+      isSolo,
+    } = req.body;
+
     let imageUrl = "";
 
-   if (req.file) {
-  const result = await new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
-      { folder: "pos_products" },
-      (error, result) => {
-        if (error) return reject(error);
-        resolve(result);
-      }
-    );
-    uploadStream.end(req.file.buffer);
-  });
-  imageUrl = result.secure_url;
-}
-
+    if (req.file) {
+      const result = await new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          { folder: "pos_products" },
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+          }
+        );
+        uploadStream.end(req.file.buffer);
+      });
+      imageUrl = result.secure_url;
+    }
 
     const product = await Product.create({
       name,
       fullPrice,
       halfPrice,
-      stock,
+      fullStock,
+      halfStock,
       category,
       barcode,
       imageUrl,
+      isSolo: isSolo === "true" || isSolo === true,
     });
 
     res.status(201).json(product);
   } catch (err) {
     console.error("❌ Product upload error:", err);
-    res.status(500).json({ message: "Error uploading product", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Error uploading product", error: err.message });
   }
 });
 
@@ -60,9 +73,30 @@ router.get("/", async (req, res) => {
 // === Update Product ===
 router.put("/:id", upload.single("image"), async (req, res) => {
   try {
-    const { name, fullPrice, halfPrice, stock, category, barcode } = req.body;
-    const updateData = { name, fullPrice, halfPrice, stock, category, barcode };
+    const {
+      name,
+      fullPrice,
+      halfPrice,
+      fullStock,
+      halfStock,
+      category,
+      barcode,
+      isSolo,
+    } = req.body;
 
+    // Build update data
+    const updateData = {
+      name,
+      fullPrice,
+      halfPrice,
+      fullStock,
+      halfStock,
+      category,
+      barcode,
+      isSolo: isSolo === "true" || isSolo === true,
+    };
+
+    // If image is uploaded → upload to Cloudinary
     if (req.file) {
       const result = await new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
@@ -77,11 +111,16 @@ router.put("/:id", upload.single("image"), async (req, res) => {
       updateData.imageUrl = result.secure_url;
     }
 
-    const updated = await Product.findByIdAndUpdate(req.params.id, updateData, { new: true });
+    const updated = await Product.findByIdAndUpdate(req.params.id, updateData, {
+      new: true,
+    });
+
     res.json(updated);
   } catch (err) {
     console.error("❌ Error updating product:", err);
-    res.status(500).json({ message: "Error updating product", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Error updating product", error: err.message });
   }
 });
 
@@ -92,7 +131,9 @@ router.delete("/:id", async (req, res) => {
     res.json({ message: "✅ Product deleted successfully" });
   } catch (err) {
     console.error("❌ Error deleting product:", err);
-    res.status(500).json({ message: "Error deleting product", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Error deleting product", error: err.message });
   }
 });
 
