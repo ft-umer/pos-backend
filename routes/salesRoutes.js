@@ -19,17 +19,23 @@ router.post("/", async (req, res) => {
     for (const item of items) {
       const product = await Product.findById(item.productId);
       if (!product) {
-        return res.status(404).json({ message: `Product not found: ${item.productId}` });
+        return res
+          .status(404)
+          .json({ message: `Product not found: ${item.productId}` });
       }
 
       if (item.plateType === "Full Plate") {
         if (product.fullStock < item.quantity) {
-          return res.status(400).json({ message: `Insufficient full stock for ${product.name}` });
+          return res
+            .status(400)
+            .json({ message: `Insufficient full stock for ${product.name}` });
         }
         product.fullStock -= item.quantity;
       } else if (item.plateType === "Half Plate") {
         if (product.halfStock < item.quantity) {
-          return res.status(400).json({ message: `Insufficient half stock for ${product.name}` });
+          return res
+            .status(400)
+            .json({ message: `Insufficient half stock for ${product.name}` });
         }
         product.halfStock -= item.quantity;
       }
@@ -93,7 +99,8 @@ router.put("/:id", async (req, res) => {
         } else if (item.plateType === "Half Plate") {
           product.halfStock += item.quantity;
         }
-        product.totalStock = (product.fullStock || 0) + (product.halfStock || 0);
+        product.totalStock =
+          (product.fullStock || 0) + (product.halfStock || 0);
         await product.save();
       }
     }
@@ -102,17 +109,23 @@ router.put("/:id", async (req, res) => {
     for (const item of items) {
       const product = await Product.findById(item.productId);
       if (!product) {
-        return res.status(404).json({ message: `Product not found: ${item.productId}` });
+        return res
+          .status(404)
+          .json({ message: `Product not found: ${item.productId}` });
       }
 
       if (item.plateType === "Full Plate") {
         if (product.fullStock < item.quantity) {
-          return res.status(400).json({ message: `Insufficient full stock for ${product.name}` });
+          return res
+            .status(400)
+            .json({ message: `Insufficient full stock for ${product.name}` });
         }
         product.fullStock -= item.quantity;
       } else if (item.plateType === "Half Plate") {
         if (product.halfStock < item.quantity) {
-          return res.status(400).json({ message: `Insufficient half stock for ${product.name}` });
+          return res
+            .status(400)
+            .json({ message: `Insufficient half stock for ${product.name}` });
         }
         product.halfStock -= item.quantity;
       }
@@ -156,7 +169,8 @@ router.delete("/all", async (req, res) => {
           } else if (item.plateType === "Half Plate") {
             product.halfStock += item.quantity;
           }
-          product.totalStock = (product.fullStock || 0) + (product.halfStock || 0);
+          product.totalStock =
+            (product.fullStock || 0) + (product.halfStock || 0);
           await product.save();
         }
       }
@@ -164,14 +178,14 @@ router.delete("/all", async (req, res) => {
 
     // ✅ Delete all sales
     await Sale.deleteMany({});
-    res.status(200).json({ message: "All sales deleted successfully and stock restored." });
+    res
+      .status(200)
+      .json({ message: "All sales deleted successfully and stock restored." });
   } catch (err) {
     console.error("❌ Error deleting all sales:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
-
-
 
 // ========================
 // DELETE /sales/:id → Delete Sale
@@ -194,7 +208,8 @@ router.delete("/:id", async (req, res) => {
         } else if (item.plateType === "Half Plate") {
           product.halfStock += item.quantity;
         }
-        product.totalStock = (product.fullStock || 0) + (product.halfStock || 0);
+        product.totalStock =
+          (product.fullStock || 0) + (product.halfStock || 0);
         await product.save();
       }
     }
@@ -206,6 +221,5 @@ router.delete("/:id", async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
-
 
 export default router;

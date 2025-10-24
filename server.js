@@ -30,7 +30,7 @@ cloudinary.config({
 // MongoDB Connection
 // =======================
 mongoose
-  .connect(process.env.MONGODB_URI, {
+  .connect(process.env.MONGODB_URI || "mongodb+srv://syedumerhassni:naibtana123@cluster0.8kun6ji.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0", {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
