@@ -9,8 +9,10 @@ import bcrypt from "bcryptjs";
 import productRoutes from "./routes/productRoutes.js";
 import salesRoutes from "./routes/salesRoutes.js";
 import orderTakerRoutes from "./routes/orderTakerRoutes.js";
+import activityRoutes from "./routes/activityRoutes.js"
 import { v2 as cloudinary } from "cloudinary";
-
+import User from "./models/User.js";
+import Activity from "./models/Activity.js";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -39,21 +41,6 @@ mongoose
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
   })
   .catch((err) => console.error("❌ MongoDB connection error:", err));
-
-// =======================
-// User Schema
-// =======================
-const userSchema = new mongoose.Schema({
-  username: { type: String, unique: true, required: true },
-  role: { type: String, enum: ["superadmin", "admin"], required: true },
-  site: { type: String },
-  pin: { type: String },
-  password: { type: String, required: true },
-  lastLogin: { type: Date },
-  lastLogout: { type: Date },
-});
-
-const User = mongoose.model("User", userSchema);
 
 // =======================
 // Middleware
@@ -196,6 +183,25 @@ app.post("/users", authenticateJWT, authorizeSuperadmin, async (req, res) => {
   }
 });
 
+// =======================
+// Fetch all activity logs (superadmin only)
+// =======================
+app.get("/activity", authenticateJWT, async (req, res) => {
+  try {
+    // 🟢 Only superadmin can view activity logs
+    if (req.user.role !== "superadmin") {
+      return res.status(403).json({ message: "Forbidden: Superadmin only" });
+    }
+
+    const logs = await Activity.find().sort({ timestamp: -1 }).limit(100);
+    res.status(200).json(logs);
+  } catch (err) {
+    console.error("Fetch activity error:", err);
+    res.status(500).json({ message: "Failed to fetch activity logs" });
+  }
+});
+
+
 
 app.delete("/users/:id", authenticateJWT, authorizeSuperadmin, async (req, res) => {
   try {
@@ -228,6 +234,7 @@ app.delete("/users/:id", authenticateJWT, authorizeSuperadmin, async (req, res) 
 app.use("/products", productRoutes);
 app.use("/orderTakers", orderTakerRoutes);
 app.use("/sales", salesRoutes);
+app.use("/activity", activityRoutes)
 
 // 👉 Export default for Vercel
 export default app;
