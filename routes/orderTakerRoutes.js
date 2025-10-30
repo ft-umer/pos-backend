@@ -55,19 +55,19 @@ router.put("/:id", authenticateJWT, async (req, res) => {
     if (!taker) return res.status(404).json({ message: "Order taker not found" });
 
     if (req.user.role === "admin") {
-      // Only allow updating balance
-      if (Object.keys(updateData).length !== 1 || updateData.balance === undefined) {
-        return res.status(403).json({ message: "Admins can only edit balance" });
-      }
+  if (updateData.balance === undefined) {
+    return res.status(403).json({ message: "Admins can only edit balance" });
+  }
 
-      taker.balance = updateData.balance;
-      await taker.save();
+  // Convert to number just in case
+  taker.balance = Number(updateData.balance);
+  await taker.save();
 
-      // ✅ Log activity for admin as well
-      await logActivity(req.user, `Admin updated balance for ${taker.name} to ${updateData.balance}`);
+  // Log admin activity
+  await logActivity(req.user, `Admin updated balance for ${taker.name} to ${taker.balance}`);
 
-      return res.status(200).json(taker);
-    }
+  return res.status(200).json(taker);
+}
 
     // Superadmin can update all fields
     const updated = await OrderTaker.findByIdAndUpdate(id, updateData, { new: true });
