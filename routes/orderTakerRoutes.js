@@ -1,34 +1,10 @@
 import express from "express";
 import OrderTaker from "../models/OrderTaker.js";
-import Activity from "../models/Activity.js";
+import { logActivity } from "../middleware/logActivity.js";
 import { authenticateJWT } from "../middleware/auth.js";
 
 const router = express.Router();
 
-/* ============================================================
-   Utility: Log activity
-============================================================ */
-const logActivity = async (user, action) => {
-  try {
-    if (!user || !user.username) {
-      console.warn("⚠️ Skipping activity log — invalid user:", user);
-      return;
-    }
-
-    console.log("🟢 Logging activity for:", user.username, "-", action);
-
-    const created = await Activity.create({
-      user: user._id,
-      username: user.username,
-      action,
-      timestamp: new Date(),
-    });
-
-    console.log("✅ Activity saved:", created);
-  } catch (err) {
-    console.error("❌ Activity log error:", err);
-  }
-};
 
 /* ============================================================
    Get all order takers

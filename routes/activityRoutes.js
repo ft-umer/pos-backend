@@ -1,25 +1,9 @@
 // routes/activityRoutes.js
 import express from "express";
-import Activity from "../models/Activity.js";
+import { logActivity } from "../utils/activity.js";
 import { authenticateJWT } from "../middleware/auth.js";
 
 const router = express.Router();
-// =======================
-// Utility: Log activity (fixed)
-// =======================
-const logActivity = async (user, action) => {
-  try {
-    console.log("🟢 Logging activity for:", user.username, "-", action);
-    await Activity.create({
-      user: user._id,
-      username: user.username,
-      action,
-      timestamp: new Date(),
-    });
-  } catch (err) {
-    console.error("❌ Activity log error:", err);
-  }
-};
 
 // =======================
 // Add a new order taker (superadmin only)
