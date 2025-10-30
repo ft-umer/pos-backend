@@ -52,25 +52,33 @@ router.put("/:id", authenticateJWT, async (req, res) => {
     const updateData = req.body;
 
     const taker = await OrderTaker.findById(id);
-    if (!taker) return res.status(404).json({ message: "Order taker not found" });
+    if (!taker)
+      return res.status(404).json({ message: "Order taker not found" });
 
     if (req.user.role === "admin") {
-  if (updateData.balance === undefined) {
-    return res.status(403).json({ message: "Admins can only edit balance" });
-  }
+      if (updateData.balance === undefined) {
+        return res
+          .status(403)
+          .json({ message: "Admins can only edit balance" });
+      }
 
-  // Convert to number just in case
-  taker.balance = Number(updateData.balance);
-  await taker.save();
+      // Convert to number just in case
+      taker.balance = Number(updateData.balance);
+      await taker.save();
 
-  // Log admin activity
-  await logActivity(req.user, `Admin updated balance for ${taker.name} to ${taker.balance}`);
+      // Log admin activity
+      await logActivity(
+        req.user,
+        `Admin updated balance for ${taker.name} to ${taker.balance}`
+      );
 
-  return res.status(200).json(taker);
-}
+      return res.status(200).json(taker);
+    }
 
     // Superadmin can update all fields
-    const updated = await OrderTaker.findByIdAndUpdate(id, updateData, { new: true });
+    const updated = await OrderTaker.findByIdAndUpdate(id, updateData, {
+      new: true,
+    });
 
     // ✅ Log activity for superadmin
     await logActivity(req.user, `Updated order taker: ${updated.name}`);
@@ -92,7 +100,8 @@ router.delete("/:id", authenticateJWT, async (req, res) => {
     }
 
     const deleted = await OrderTaker.findByIdAndDelete(req.params.id);
-    if (!deleted) return res.status(404).json({ message: "Order taker not found" });
+    if (!deleted)
+      return res.status(404).json({ message: "Order taker not found" });
 
     await logActivity(req.user, `Deleted order taker: ${deleted.name}`);
     res.status(200).json({ message: "Deleted successfully" });

@@ -2,6 +2,7 @@ import express from "express";
 import multer from "multer";
 import cloudinary from "../config/cloudinary.js";
 import Product from "../models/Product.js";
+import { logActivity } from "../middleware/logActivity.js";
 
 const router = express.Router();
 
@@ -50,6 +51,8 @@ router.post("/", upload.single("image"), async (req, res) => {
       imageUrl,
       isSolo: isSolo === "true" || isSolo === true,
     });
+    
+    await logActivity(req.user, `Created product: ${product.name}`); // ✅ log activity
 
     res.status(201).json(product);
   } catch (err) {
@@ -110,10 +113,14 @@ router.put("/:id", upload.single("image"), async (req, res) => {
       });
       updateData.imageUrl = result.secure_url;
     }
+    
+    
 
     const updated = await Product.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
     });
+    
+    await logActivity(req.user, `Updated product: ${updated.name}`); // ✅ log activity
 
     res.json(updated);
   } catch (err) {
@@ -128,6 +135,9 @@ router.put("/:id", upload.single("image"), async (req, res) => {
 router.delete("/:id", async (req, res) => {
   try {
     await Product.findByIdAndDelete(req.params.id);
+     if (product) {
+      await logActivity(req.user, `Deleted product: ${product.name}`); // ✅ log activity
+    }
     res.json({ message: "✅ Product deleted successfully" });
   } catch (err) {
     console.error("❌ Error deleting product:", err);
