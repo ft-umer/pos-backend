@@ -119,6 +119,7 @@ router.delete("/:id", authenticateJWT, async (req, res) => {
     res.status(200).json({ message: "Deleted successfully" });
   } catch (err) {
     console.error("Delete order taker error:", err);
+    
     res.status(500).json({ message: "Failed to delete order taker" });
   }
 });
