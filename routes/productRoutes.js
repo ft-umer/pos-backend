@@ -3,6 +3,7 @@ import multer from "multer";
 import cloudinary from "../config/cloudinary.js";
 import Product from "../models/Product.js";
 import { logActivity } from "../middleware/logActivity.js";
+import { authenticateJWT } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -11,7 +12,7 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 // === Create Product ===
-router.post("/", upload.single("image"), async (req, res) => {
+router.post("/", authenticateJWT, upload.single("image"), async (req, res) => {
   try {
     const {
       name,
@@ -64,7 +65,7 @@ router.post("/", upload.single("image"), async (req, res) => {
 });
 
 // === Get All Products ===
-router.get("/", async (req, res) => {
+router.get("/", authenticateJWT, async (req, res) => {
   try {
     const products = await Product.find().sort({ createdAt: -1 });
     res.status(200).json(products);
@@ -74,7 +75,7 @@ router.get("/", async (req, res) => {
 });
 
 // === Update Product ===
-router.put("/:id", upload.single("image"), async (req, res) => {
+router.put("/:id", authenticateJWT, upload.single("image"), async (req, res) => {
   try {
     const {
       name,
@@ -132,7 +133,7 @@ router.put("/:id", upload.single("image"), async (req, res) => {
 });
 
 // === Delete Product ===
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", authenticateJWT, async (req, res) => {
   try {
     await Product.findByIdAndDelete(req.params.id);
      if (product) {
