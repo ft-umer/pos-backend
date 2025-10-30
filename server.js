@@ -13,6 +13,7 @@ import activityRoutes from "./routes/activityRoutes.js"
 import { v2 as cloudinary } from "cloudinary";
 import User from "./models/User.js";
 import Activity from "./models/Activity.js";
+import product from "./routes/products.js"
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -143,7 +144,7 @@ app.post("/login", async (req, res) => {
     await user.save();
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "8h",
+      expiresIn: "24h",
     });
     res.json({ message: "Login successful", token, user });
   } catch (err) {
@@ -258,6 +259,7 @@ app.use("/products", productRoutes);
 app.use("/orderTakers", orderTakerRoutes);
 app.use("/sales", salesRoutes);
 app.use("/activity", activityRoutes)
+app.use("/productOrder", product)
 
 // 👉 Export default for Vercel
 export default app;

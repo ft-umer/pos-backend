@@ -67,14 +67,13 @@ router.put("/:id", authenticateJWT, upload.single("image"), async (req, res) => 
   }
 });
 
-
-// === Get All Products ===
 router.get("/", authenticateJWT, async (req, res) => {
   try {
-    const products = await Product.find().sort({ createdAt: -1 });
+    const products = await Product.find().sort({ sortOrder: 1 });
     res.status(200).json(products);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("Error fetching products:", err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
