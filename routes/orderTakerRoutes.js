@@ -5,7 +5,6 @@ import { authenticateJWT } from "../middleware/auth.js";
 
 const router = express.Router();
 
-
 /* ============================================================
    Get all order takers
 ============================================================ */
@@ -32,7 +31,7 @@ router.post("/", authenticateJWT, async (req, res) => {
     const newTaker = new OrderTaker({ name, phone, balance, imageUrl });
     await newTaker.save();
 
-    // Log activity
+    // ✅ Log activity for superadmin
     await logActivity(req.user, `Added order taker: ${name}`);
 
     res.status(201).json(newTaker);
@@ -55,8 +54,8 @@ router.put("/:id", authenticateJWT, async (req, res) => {
     const taker = await OrderTaker.findById(id);
     if (!taker) return res.status(404).json({ message: "Order taker not found" });
 
-    // 🟡 Admins can only update balance
     if (req.user.role === "admin") {
+      // Only allow updating balance
       if (Object.keys(updateData).length !== 1 || updateData.balance === undefined) {
         return res.status(403).json({ message: "Admins can only edit balance" });
       }
@@ -64,12 +63,16 @@ router.put("/:id", authenticateJWT, async (req, res) => {
       taker.balance = updateData.balance;
       await taker.save();
 
-      await logActivity(req.user, `Updated balance for ${taker.name} to ${updateData.balance}`);
+      // ✅ Log activity for admin as well
+      await logActivity(req.user, `Admin updated balance for ${taker.name} to ${updateData.balance}`);
+
       return res.status(200).json(taker);
     }
 
-    // 🟢 Superadmin can update everything
+    // Superadmin can update all fields
     const updated = await OrderTaker.findByIdAndUpdate(id, updateData, { new: true });
+
+    // ✅ Log activity for superadmin
     await logActivity(req.user, `Updated order taker: ${updated.name}`);
 
     res.status(200).json(updated);
@@ -95,7 +98,6 @@ router.delete("/:id", authenticateJWT, async (req, res) => {
     res.status(200).json({ message: "Deleted successfully" });
   } catch (err) {
     console.error("Delete order taker error:", err);
-    
     res.status(500).json({ message: "Failed to delete order taker" });
   }
 });
