@@ -28,19 +28,42 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// =======================
-// MongoDB Connection
-// =======================
-mongoose
-  .connect(process.env.MONGODB_URI || "mongodb+srv://syedumerhassni:naibtana123@cluster0.8kun6ji.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0", {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => {
+
+const connectDB = async () => {
+  try {
+    await mongoose.connect(
+      process.env.MONGODB_URI ||
+        "mongodb+srv://syedumerhassni:naibtana123@cluster0.8kun6ji.mongodb.net/test?retryWrites=true&w=majority&appName=Cluster0",
+      {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+        serverSelectionTimeoutMS: 20000, // Wait 20s before giving up
+        socketTimeoutMS: 45000,          // Close sockets after 45s of inactivity
+        keepAliveInitialDelay: 300000,   // <== fixed option name
+      }
+    );
+
     console.log("✅ Connected to MongoDB");
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-  })
-  .catch((err) => console.error("❌ MongoDB connection error:", err));
+
+    mongoose.connection.on("disconnected", () => {
+      console.warn("⚠️ MongoDB disconnected. Retrying...");
+      setTimeout(connectDB, 5000); // retry after 5s
+    });
+
+    mongoose.connection.on("error", (err) => {
+      console.error("❌ MongoDB error:", err);
+    });
+
+    // Start server after first connection only
+    app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+  } catch (err) {
+    console.error("❌ Initial MongoDB connection failed:", err);
+    setTimeout(connectDB, 5000); // retry again after 5s
+  }
+};
+
+connectDB();
+
 
 // =======================
 // Middleware
