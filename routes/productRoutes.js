@@ -13,7 +13,7 @@ const upload = multer({ storage });
 
 router.post("/", authenticateJWT, upload.single("image"), async (req, res) => {
   try {
-    const { name, fullPrice, halfPrice, fullStock, halfStock, category, barcode, isSolo } = req.body;
+    const { name, fullPrice, halfPrice, fullStock, halfStock, familyPack, familyStock, category, barcode, isSolo } = req.body;
 
     let imageUrl = "";
     if (req.file) {
@@ -28,7 +28,7 @@ router.post("/", authenticateJWT, upload.single("image"), async (req, res) => {
     }
 
     const product = await Product.create({
-      name, fullPrice, halfPrice, fullStock, halfStock, category, barcode, imageUrl, isSolo: isSolo === "true" || isSolo === true
+      name, fullPrice, halfPrice, fullStock, halfStock, familyPack, familyStock, category, barcode, imageUrl,  isSolo: isSolo === "true" || isSolo === true
     });
 
     await logActivity(req.user, `Created product: ${product.name}`);
@@ -41,9 +41,9 @@ router.post("/", authenticateJWT, upload.single("image"), async (req, res) => {
 
 router.put("/:id", authenticateJWT, upload.single("image"), async (req, res) => {
   try {
-    const { name, fullPrice, halfPrice, fullStock, halfStock, category, barcode, isSolo } = req.body;
+    const { name, fullPrice, halfPrice, fullStock, halfStock, familyPack, familyStock, category, barcode, isSolo } = req.body;
 
-    const updateData = { name, fullPrice, halfPrice, fullStock, halfStock, category, barcode, isSolo: isSolo === "true" || isSolo === true };
+    const updateData = { name, fullPrice, halfPrice, fullStock, halfStock, familyPack, familyStock, category, barcode, isSolo: isSolo === "true" || isSolo === true };
 
     if (req.file) {
       const result = await new Promise((resolve, reject) => {

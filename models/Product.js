@@ -7,6 +7,8 @@ const productSchema = new mongoose.Schema(
     halfPrice: { type: Number },
     fullStock: { type: Number, required: true },
     halfStock: { type: Number },
+    familyPack:{ type:Number },
+    familyStock:{ type:Number },
     totalStock: { type: Number },
     barcode: { type: String },
     category: { type: String },
