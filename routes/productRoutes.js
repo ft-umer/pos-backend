@@ -7,50 +7,84 @@ import { authenticateJWT } from "../middleware/auth.js";
 
 const router = express.Router();
 
-// ✅ Multer setup (memory storage for Cloudinary)
+// Multer setup (memory storage for Cloudinary)
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
+// =================== CREATE PRODUCT ===================
 router.post("/", authenticateJWT, upload.single("image"), async (req, res) => {
   try {
-    const { name, fullPrice, halfPrice, fullStock, halfStock, familyPack, familyStock, category, barcode, isSolo } = req.body;
+    const { 
+      name, fullPrice, halfPrice, fullStock, halfStock, 
+      familyPack, familyStock, category, barcode, isSolo 
+    } = req.body;
 
+    // Upload image to Cloudinary
     let imageUrl = "";
     if (req.file) {
       const result = await new Promise((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream({ folder: "pos_products" }, (err, result) => {
-          if (err) return reject(err);
-          resolve(result);
-        });
+        const uploadStream = cloudinary.uploader.upload_stream(
+          { folder: "pos_products" }, 
+          (err, result) => err ? reject(err) : resolve(result)
+        );
         uploadStream.end(req.file.buffer);
       });
       imageUrl = result.secure_url;
     }
 
+    // Create product with numeric casting
     const product = await Product.create({
-      name, fullPrice, halfPrice, fullStock, halfStock, familyPack, familyStock, category, barcode, imageUrl,  isSolo: isSolo === "true" || isSolo === true
+      name,
+      fullPrice: Number(fullPrice),
+      halfPrice: Number(halfPrice),
+      fullStock: Number(fullStock),
+      halfStock: Number(halfStock),
+      familyPack: Number(familyPack),
+      familyStock: Number(familyStock),
+      category,
+      barcode,
+      imageUrl,
+      isSolo: isSolo === "true" || isSolo === true
     });
 
     await logActivity(req.user, `Created product: ${product.name}`);
     res.status(201).json(product);
+
   } catch (err) {
     console.error("❌ Product upload error:", err);
     res.status(500).json({ message: "Error uploading product", error: err.message });
   }
 });
 
+// =================== UPDATE PRODUCT ===================
 router.put("/:id", authenticateJWT, upload.single("image"), async (req, res) => {
   try {
-    const { name, fullPrice, halfPrice, fullStock, halfStock, familyPack, familyStock, category, barcode, isSolo } = req.body;
+    const { 
+      name, fullPrice, halfPrice, fullStock, halfStock, 
+      familyPack, familyStock, category, barcode, isSolo 
+    } = req.body;
 
-    const updateData = { name, fullPrice, halfPrice, fullStock, halfStock, familyPack, familyStock, category, barcode, isSolo: isSolo === "true" || isSolo === true };
+    // Prepare update data with numeric casting
+    const updateData = {
+      name,
+      fullPrice: Number(fullPrice),
+      halfPrice: Number(halfPrice),
+      fullStock: Number(fullStock),
+      halfStock: Number(halfStock),
+      familyPack: Number(familyPack),
+      familyStock: Number(familyStock),
+      category,
+      barcode,
+      isSolo: isSolo === "true" || isSolo === true
+    };
 
+    // Upload new image if provided
     if (req.file) {
       const result = await new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream({ folder: "pos_products" }, (err, result) => {
-          if (err) return reject(err);
-          resolve(result);
-        });
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: "pos_products" },
+          (err, result) => err ? reject(err) : resolve(result)
+        );
         stream.end(req.file.buffer);
       });
       updateData.imageUrl = result.secure_url;
@@ -61,12 +95,14 @@ router.put("/:id", authenticateJWT, upload.single("image"), async (req, res) => 
 
     await logActivity(req.user, `Updated product: ${updated.name}`);
     res.json(updated);
+
   } catch (err) {
     console.error("❌ Error updating product:", err);
     res.status(500).json({ message: "Error updating product", error: err.message });
   }
 });
 
+// =================== GET PRODUCTS ===================
 router.get("/", authenticateJWT, async (req, res) => {
   try {
     const products = await Product.find().sort({ sortOrder: 1 });
@@ -77,7 +113,7 @@ router.get("/", authenticateJWT, async (req, res) => {
   }
 });
 
-
+// =================== DELETE PRODUCT ===================
 router.delete("/:id", authenticateJWT, async (req, res) => {
   try {
     const product = await Product.findByIdAndDelete(req.params.id);
@@ -85,11 +121,11 @@ router.delete("/:id", authenticateJWT, async (req, res) => {
 
     await logActivity(req.user, `Deleted product: ${product.name}`);
     res.json({ message: "✅ Product deleted successfully" });
+
   } catch (err) {
     console.error("❌ Error deleting product:", err);
     res.status(500).json({ message: "Error deleting product", error: err.message });
   }
 });
-
 
 export default router;
