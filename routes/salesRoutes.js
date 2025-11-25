@@ -1,6 +1,7 @@
 import express from "express";
 import Sale from "../models/Sales.js";
 import Product from "../models/Product.js";
+import OrderTaker from "../models/OrderTaker.js";
 
 const router = express.Router();
 
@@ -49,16 +50,6 @@ router.post("/", async (req, res) => {
     });
 
     await sale.save();
-
-    // 🔥 Update order taker balance in DB
-    if (orderTaker && orderTaker !== "Open Sale") {
-      const taker = await OrderTaker.findOne({ name: orderTaker });
-
-      if (taker) {
-        taker.balance = (taker.balance || 0) - total;
-        await taker.save();
-      }
-    }
 
     res.status(201).json(sale);
   } catch (err) {
