@@ -15,27 +15,22 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ message: "No items in sale." });
     }
 
-    // ✅ Validate and update product stock
+    // ✅ Update product stock
     for (const item of items) {
       const product = await Product.findById(item.productId);
       if (!product) {
-        return res
-          .status(404)
-          .json({ message: `Product not found: ${item.productId}` });
+        return res.status(404).json({ message: `Product not found: ${item.productId}` });
       }
 
       if (item.plateType === "Full Plate") {
         if (product.fullStock < item.quantity) {
-          return res
-            .status(400)
-            .json({ message: `Insufficient full stock for ${product.name}` });
+          return res.status(400).json({ message: `Insufficient full stock for ${product.name}` });
         }
         product.fullStock -= item.quantity;
-      } else if (item.plateType === "Half Plate") {
+      } 
+      else if (item.plateType === "Half Plate") {
         if (product.halfStock < item.quantity) {
-          return res
-            .status(400)
-            .json({ message: `Insufficient half stock for ${product.name}` });
+          return res.status(400).json({ message: `Insufficient half stock for ${product.name}` });
         }
         product.halfStock -= item.quantity;
       }
@@ -44,7 +39,7 @@ router.post("/", async (req, res) => {
       await product.save();
     }
 
-    // ✅ Create new sale record
+    // ✅ Create sale
     const sale = new Sale({
       items,
       total,
@@ -54,12 +49,24 @@ router.post("/", async (req, res) => {
     });
 
     await sale.save();
+
+    // 🔥 Update order taker balance in DB
+    if (orderTaker && orderTaker !== "Open Sale") {
+      const taker = await OrderTaker.findOne({ name: orderTaker });
+
+      if (taker) {
+        taker.balance = (taker.balance || 0) - total;
+        await taker.save();
+      }
+    }
+
     res.status(201).json(sale);
   } catch (err) {
     console.error("❌ Error creating sale:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
+
 
 // ========================
 // GET /sales → Fetch all sales (with product details)
