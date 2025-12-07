@@ -148,36 +148,10 @@ router.put("/:id", async (req, res) => {
 });
 
 
-// ========================
-// DELETE /sales → Delete ALL Sales
-// ========================
+// DELETE /sales → Delete all sales
 router.delete("/", async (req, res) => {
   try {
-    // Fetch all sales
-    const sales = await Sale.find();
-
-    if (sales.length === 0) {
-      return res.status(404).json({ message: "No sales to delete." });
-    }
-
-    // Restore stock for each sale
-    for (const sale of sales) {
-      for (const item of sale.items) {
-        const product = await Product.findById(item.productId);
-        if (product) {
-          if (item.plateType === "Full Plate") {
-            product.fullStock += item.quantity;
-          } else if (item.plateType === "Half Plate") {
-            product.halfStock += item.quantity;
-          }
-          product.totalStock = (product.fullStock || 0) + (product.halfStock || 0);
-          await product.save();
-        }
-      }
-    }
-
-    // Delete all sales
-    await Sale.deleteMany({});
+    await Sale.deleteMany({}); // Delete all documents in the Sales collection
     res.status(200).json({ message: "All sales deleted successfully" });
   } catch (err) {
     console.error("❌ Error deleting all sales:", err);
