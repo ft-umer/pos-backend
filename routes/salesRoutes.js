@@ -149,7 +149,7 @@ router.put("/:id", async (req, res) => {
 
 
 // DELETE /sales → Delete all sales
-router.delete("/", async (req, res) => {
+router.delete("/all", async (req, res) => {
   try {
     await Sale.deleteMany({}); // Delete all documents in the Sales collection
     res.status(200).json({ message: "All sales deleted successfully" });
