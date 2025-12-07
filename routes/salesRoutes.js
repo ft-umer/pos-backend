@@ -147,18 +147,21 @@ router.put("/:id", async (req, res) => {
   }
 });
 
+
 // ========================
-// DELETE /sales → Delete All Sales
+// DELETE /sales → Delete ALL Sales
 // ========================
-router.delete("/all", async (req, res) => {
+router.delete("/", async (req, res) => {
   try {
-    const allSales = await Sale.find();
-    if (!allSales.length) {
-      return res.status(404).json({ message: "No sales found to delete." });
+    // Fetch all sales
+    const sales = await Sale.find();
+
+    if (sales.length === 0) {
+      return res.status(404).json({ message: "No sales to delete." });
     }
 
-    // ✅ Restore stock for all sold products
-    for (const sale of allSales) {
+    // Restore stock for each sale
+    for (const sale of sales) {
       for (const item of sale.items) {
         const product = await Product.findById(item.productId);
         if (product) {
@@ -167,23 +170,21 @@ router.delete("/all", async (req, res) => {
           } else if (item.plateType === "Half Plate") {
             product.halfStock += item.quantity;
           }
-          product.totalStock =
-            (product.fullStock || 0) + (product.halfStock || 0);
+          product.totalStock = (product.fullStock || 0) + (product.halfStock || 0);
           await product.save();
         }
       }
     }
 
-    // ✅ Delete all sales
+    // Delete all sales
     await Sale.deleteMany({});
-    res
-      .status(200)
-      .json({ message: "All sales deleted successfully and stock restored." });
+    res.status(200).json({ message: "All sales deleted successfully" });
   } catch (err) {
     console.error("❌ Error deleting all sales:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
+
 
 // ========================
 // DELETE /sales/:id → Delete Sale
