@@ -103,7 +103,7 @@ router.put("/:id", authenticateJWT, upload.single("image"), async (req, res) => 
 });
 
 // =================== GET PRODUCTS ===================
-router.get("/", authenticateJWT, async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const products = await Product.find().sort({ sortOrder: 1 });
     res.status(200).json(products);
