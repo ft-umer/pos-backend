@@ -40,9 +40,21 @@ router.post("/", authenticateJWT, async (req, res) => {
             .json({ message: `Insufficient half stock for ${product.name}` });
         }
         product.halfStock -= item.quantity;
+      } else if (item.plateType === "Family Pack") {
+        if (product.familyStock < item.quantity) {
+          return res
+            .status(400)
+            .json({
+              message: `Insufficient family pack stock for ${product.name}`,
+            });
+        }
+        product.familyStock -= item.quantity;
       }
 
-      product.totalStock = (product.fullStock || 0) + (product.halfStock || 0);
+      product.totalStock =
+        (product.fullStock || 0) +
+        (product.halfStock || 0) +
+        (product.familyPack || 0);
       await product.save();
     }
 
@@ -189,7 +201,6 @@ router.delete("/range", authenticateJWT, async (req, res) => {
   }
 });
 
-
 // ========================
 // DELETE /sales/:id → Delete Sale
 // ========================
@@ -224,8 +235,6 @@ router.delete("/:id", authenticateJWT, async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
-
-
 
 // GET /sales/admin-tabs
 router.get("/admin-tabs", authenticateJWT, async (req, res) => {
