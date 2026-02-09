@@ -17,8 +17,15 @@ const SaleSchema = new mongoose.Schema(
     paymentMethod: { type: String, required: true },
     orderType: { type: String, required: true },
     orderTaker: { type: String, required: true },
+    // ✅ logged-in user
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
   },
-  { timestamps: true }
+
+  { timestamps: true },
 );
 
 export default mongoose.model("Sale", SaleSchema);

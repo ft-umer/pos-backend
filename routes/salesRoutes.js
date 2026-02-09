@@ -2,13 +2,14 @@ import express from "express";
 import Sale from "../models/Sales.js";
 import Product from "../models/Product.js";
 import OrderTaker from "../models/OrderTaker.js";
+import { authenticateJWT } from "../middleware/auth.js";
 
 const router = express.Router();
 
 // ========================
 // POST /sales → Create Sale
 // ========================
-router.post("/", async (req, res) => {
+router.post("/", authenticateJWT, async (req, res) => {
   try {
     const { items, total, paymentMethod, orderType, orderTaker } = req.body;
 
@@ -20,18 +21,23 @@ router.post("/", async (req, res) => {
     for (const item of items) {
       const product = await Product.findById(item.productId);
       if (!product) {
-        return res.status(404).json({ message: `Product not found: ${item.productId}` });
+        return res
+          .status(404)
+          .json({ message: `Product not found: ${item.productId}` });
       }
 
       if (item.plateType === "Full Plate") {
         if (product.fullStock < item.quantity) {
-          return res.status(400).json({ message: `Insufficient full stock for ${product.name}` });
+          return res
+            .status(400)
+            .json({ message: `Insufficient full stock for ${product.name}` });
         }
         product.fullStock -= item.quantity;
-      } 
-      else if (item.plateType === "Half Plate") {
+      } else if (item.plateType === "Half Plate") {
         if (product.halfStock < item.quantity) {
-          return res.status(400).json({ message: `Insufficient half stock for ${product.name}` });
+          return res
+            .status(400)
+            .json({ message: `Insufficient half stock for ${product.name}` });
         }
         product.halfStock -= item.quantity;
       }
@@ -47,6 +53,7 @@ router.post("/", async (req, res) => {
       paymentMethod,
       orderType,
       orderTaker,
+      user: req.user._id,
     });
 
     await sale.save();
@@ -58,14 +65,24 @@ router.post("/", async (req, res) => {
   }
 });
 
-
 // ========================
 // GET /sales → Fetch all sales (with product details)
 // ========================
-router.get("/", async (req, res) => {
+// ========================
+// GET /sales → Fetch sales (admin sees own, superadmin sees all)
+// ========================
+router.get("/", authenticateJWT, async (req, res) => {
   try {
-    const sales = await Sale.find()
+    let query = {};
+
+    // ✅ Admin → only own sales
+    if (req.user.role !== "superadmin") {
+      query.user = req.user._id;
+    }
+
+    const sales = await Sale.find(query)
       .sort({ createdAt: -1 })
+      .populate("user", "username email role")
       .populate("items.productId", "name fullPrice halfPrice imageUrl");
 
     res.status(200).json(sales);
@@ -78,7 +95,7 @@ router.get("/", async (req, res) => {
 // ========================
 // PUT /sales/:id → Edit Sale
 // ========================
-router.put("/:id", async (req, res) => {
+router.put("/:id", authenticateJWT, async (req, res) => {
   try {
     const { id } = req.params;
     const { items, total, paymentMethod, orderType, orderTaker } = req.body;
@@ -147,15 +164,28 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-
-// DELETE /sales → Delete all sales
-router.delete("/all", async (req, res) => {
+router.delete("/range", authenticateJWT, async (req, res) => {
   try {
-    await Sale.deleteMany({}); // Delete all documents in the Sales collection
-    res.status(200).json({ message: "All sales deleted successfully" });
-  } catch (err) {
-    console.error("❌ Error deleting all sales:", err);
-    res.status(500).json({ message: "Server error", error: err.message });
+    const { from, to } = req.query;
+
+    if (!from || !to) {
+      return res.status(400).json({ message: "From and To dates required" });
+    }
+
+    const result = await Sale.deleteMany({
+      createdAt: {
+        $gte: new Date(from),
+        $lte: new Date(`${to}T23:59:59.999`),
+      },
+    });
+
+    res.json({
+      message: "Sales deleted successfully",
+      deletedCount: result.deletedCount,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 
@@ -163,7 +193,7 @@ router.delete("/all", async (req, res) => {
 // ========================
 // DELETE /sales/:id → Delete Sale
 // ========================
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", authenticateJWT, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -192,6 +222,50 @@ router.delete("/:id", async (req, res) => {
   } catch (err) {
     console.error("❌ Error deleting sale:", err);
     res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+
+
+// GET /sales/admin-tabs
+router.get("/admin-tabs", authenticateJWT, async (req, res) => {
+  try {
+    // 🔒 Only SUPERADMIN
+    if (req.user.role !== "superadmin") {
+      return res.status(403).json({ message: "Superadmin only" });
+    }
+
+    const sales = await Sale.find()
+      .populate("user", "username email role")
+      .populate("items.productId", "name fullPrice halfPrice imageUrl")
+      .sort({ createdAt: -1 });
+
+    const grouped = {};
+
+    for (const sale of sales) {
+      if (!sale.user) continue; // skip sales with no user
+
+      // ✅ Include admins AND superadmins
+      if (sale.user.role !== "admin" && sale.user.role !== "superadmin")
+        continue;
+
+      const adminId = sale.user._id.toString();
+
+      if (!grouped[adminId]) {
+        grouped[adminId] = {
+          adminId,
+          adminName: sale.user.username,
+          sales: [],
+        };
+      }
+
+      grouped[adminId].sales.push(sale);
+    }
+
+    res.status(200).json(Object.values(grouped));
+  } catch (err) {
+    console.error("Admin tabs error:", err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
